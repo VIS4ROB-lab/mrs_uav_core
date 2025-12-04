@@ -1,5 +1,6 @@
 # do not modify these
 root: ./
+name: eagle
 attach: true
 # you can modify these
 startup_window: status
