@@ -5,16 +5,16 @@ mrs_uav_trackers:
     # During takeoff, the control error should not exceed this number.
     # if control error reaches this number, the trackers stops moving the
     # reference and waits for the controllers to move the drone in closer.
-    max_position_difference: 0.7
+    max_position_difference: 0.1
 
     vertical_tracker:
 
-      takeoff_speed: 1.0
-      takeoff_acceleration: 0.3
+      takeoff_speed: 0.5
+      takeoff_acceleration: 0.1
 
       landing_speed: 0.5
-      landing_acceleration: 0.3
+      landing_acceleration: 0.1
 
       # beware, this is for emergency landing only
       elanding_speed: 0.5
-      elanding_acceleration: 1.0
+      elanding_acceleration: 0.1
