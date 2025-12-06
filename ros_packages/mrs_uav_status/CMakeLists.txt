@@ -153,6 +153,12 @@ install(
   DIRECTORY scripts
   USE_SOURCE_PERMISSIONS
   DESTINATION lib/${PROJECT_NAME}
+  PATTERN "status_gui.py" EXCLUDE
+)
+
+install(
+  PROGRAMS scripts/status_gui.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_export_targets(

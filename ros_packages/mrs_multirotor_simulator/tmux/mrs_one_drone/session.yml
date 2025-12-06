@@ -31,10 +31,10 @@ windows:
           world_config:=./config/world_config.yaml
           custom_config:=./config/custom_config.yaml
           network_config:=./config/network_config.yaml
-  - status:
-      layout: tiled
-      panes:
-        - ros2 run mrs_uav_status status.sh
+  # - status:
+  #     layout: tiled
+  #     panes:
+  #       - ros2 run mrs_uav_status status.sh
   - takeoff:
       layout: tiled
       panes:
