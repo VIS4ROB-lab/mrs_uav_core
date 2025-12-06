@@ -27,6 +27,7 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
+#include <limits>
 #include <mrs_msgs/msg/bool_stamped.hpp>
 #include <mrs_msgs/msg/control_error.hpp>
 #include <mrs_msgs/msg/control_manager_diagnostics.hpp>
@@ -605,10 +606,14 @@ class ControlManager : public mrs_lib::Node {
   // those are passed to trackers using the common_handlers object
   bool isPointInSafetyArea2d(const mrs_msgs::msg::ReferenceStamped& point);
   bool isPointInSafetyArea3d(const mrs_msgs::msg::ReferenceStamped& point);
+  mrs_msgs::msg::ReferenceStamped getClosestPointInSafetyArea2d(
+      const mrs_msgs::msg::ReferenceStamped& point);
   bool isPathToPointInSafetyArea2d(const mrs_msgs::msg::ReferenceStamped& from,
                                    const mrs_msgs::msg::ReferenceStamped& to);
   bool isPathToPointInSafetyArea3d(const mrs_msgs::msg::ReferenceStamped& from,
                                    const mrs_msgs::msg::ReferenceStamped& to);
+  mrs_msgs::msg::ReferenceStamped getClosestPointInSafetyArea3d(
+      const mrs_msgs::msg::ReferenceStamped& point);
   double getMinZ(const std::string& frame_id);
   double getMaxZ(const std::string& frame_id);
 
@@ -1389,6 +1394,41 @@ void ControlManager::initialize(void) {
   param_loader_->loadParam("joystick/mode", _joystick_mode_);
   param_loader_->loadParam("joystick/carrot_distance",
                            _joystick_carrot_distance_);
+
+  // Override joystick carrot distance based on safety area size if enabled
+  if (use_safety_area_ && safety_zone_) {
+    mrs_lib::safety_zone::Polygon border = safety_zone_->getBorder();
+    std::vector<geometry_msgs::msg::Point> border_points =
+        border.getPointMessageVector(0.0);
+
+    // Calculate bounding box of safety area
+    double min_x = std::numeric_limits<double>::max();
+    double max_x = std::numeric_limits<double>::lowest();
+    double min_y = std::numeric_limits<double>::max();
+    double max_y = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : border_points) {
+      min_x = std::min(min_x, point.x);
+      max_x = std::max(max_x, point.x);
+      min_y = std::min(min_y, point.y);
+      max_y = std::max(max_y, point.y);
+    }
+
+    // Calculate characteristic size (use smaller dimension)
+    double width = max_x - min_x;
+    double height = max_y - min_y;
+    double safety_area_size = std::min(width, height);
+
+    // Set carrot distance as a fraction of the safety area size
+    // Use 10% of the smaller dimension as a reasonable default
+    _joystick_carrot_distance_ = safety_area_size * 0.1;
+
+    RCLCPP_INFO(node_->get_logger(),
+                "Joystick carrot distance set to %.2f m based on safety area "
+                "(width: %.2f m, height: %.2f m)",
+                _joystick_carrot_distance_, width, height);
+  }
+
   param_loader_->loadParam("joystick/joystick_timer_rate",
                            _joystick_timer_rate_);
   param_loader_->loadParam("joystick/attitude_control/tracker",
@@ -6305,12 +6345,11 @@ bool ControlManager::callbackValidateReference2d(
   mrs_msgs::msg::ReferenceStamped transformed_reference = ret.value();
 
   if (!isPointInSafetyArea2d(transformed_reference)) {
-    RCLCPP_ERROR_THROTTLE(node_->get_logger(), *clock_, 1000,
-                          "reference validation failed, the point is outside "
-                          "of the safety area!");
-    response->message = "the point is outside of the safety area";
-    response->success = false;
-    return true;
+    RCLCPP_WARN_THROTTLE(node_->get_logger(), *clock_, 1000,
+                         "reference validation: point outside safety area, "
+                         "correcting to closest safe point");
+    transformed_reference =
+        getClosestPointInSafetyArea2d(transformed_reference);
   }
 
   if (last_tracker_cmd) {
@@ -6880,13 +6919,13 @@ std::tuple<bool, std::string> ControlManager::setReference(
 
   mrs_msgs::msg::ReferenceStamped transformed_reference = ret.value();
 
-  // safety area check
+  // safety area check - automatically correct if outside
   if (!isPointInSafetyArea3d(transformed_reference)) {
-    ss << "failed to set the reference, the point is outside of the safety "
-          "area!";
-    RCLCPP_ERROR_STREAM_THROTTLE(node_->get_logger(), *clock_, 1000,
-                                 "" << ss.str());
-    return std::tuple(false, ss.str());
+    RCLCPP_WARN_THROTTLE(node_->get_logger(), *clock_, 1000,
+                         "Reference point outside safety area, correcting to "
+                         "closest valid point");
+    transformed_reference =
+        getClosestPointInSafetyArea3d(transformed_reference);
   }
 
   if (last_tracker_cmd) {
@@ -7063,13 +7102,12 @@ std::tuple<bool, std::string> ControlManager::setVelocityReference(
                eqivalent_reference.reference.position.z,
                eqivalent_reference.reference.heading);
 
-  // safety area check
+  // safety area check - automatically correct if outside
   if (!isPointInSafetyArea3d(eqivalent_reference)) {
-    ss << "failed to set the reference, the point is outside of the safety "
-          "area!";
-    RCLCPP_ERROR_STREAM_THROTTLE(node_->get_logger(), *clock_, 1000,
-                                 "" << ss.str());
-    return std::tuple(false, ss.str());
+    RCLCPP_WARN_THROTTLE(node_->get_logger(), *clock_, 1000,
+                         "Velocity reference equivalent point outside safety "
+                         "area, correcting to closest valid point");
+    eqivalent_reference = getClosestPointInSafetyArea3d(eqivalent_reference);
   }
 
   if (last_tracker_cmd) {
@@ -7303,14 +7341,10 @@ ControlManager::setTrajectoryReference(
             return std::tuple(false, ss.str(), false,
                               std::vector<std::string>(), std::vector<bool>(),
                               std::vector<std::string>());
-
-            // we have a valid point in the past
           } else {
             if (!_snap_trajectory_to_safety_area_) {
               break;
             }
-
-            bool interpolation_success = true;
 
             // iterpolate between the last valid point and this new valid point
             double angle = atan2(
@@ -7338,19 +7372,17 @@ ControlManager::setTrajectoryReference(
                   (j - last_valid_idx) * sin(angle) * step;
 
               if (!isPointInSafetyArea2d(temp_point)) {
-                interpolation_success = false;
-                break;
-
-              } else {
-                processed_trajectory.points.at(j).position.x =
-                    temp_point.reference.position.x;
-                processed_trajectory.points.at(j).position.y =
-                    temp_point.reference.position.y;
+                RCLCPP_WARN_THROTTLE(
+                    node_->get_logger(), *clock_, 1000,
+                    "trajectory interpolation: point outside safety area, "
+                    "correcting to closest safe point");
+                temp_point = getClosestPointInSafetyArea2d(temp_point);
               }
-            }
 
-            if (!interpolation_success) {
-              break;
+              processed_trajectory.points.at(j).position.x =
+                  temp_point.reference.position.x;
+              processed_trajectory.points.at(j).position.y =
+                  temp_point.reference.position.y;
             }
           }
 
@@ -7863,6 +7895,134 @@ bool ControlManager::isPointInSafetyArea3d(
 
 //}
 
+/* //{ getClosestPointInSafetyArea3d() */
+
+mrs_msgs::msg::ReferenceStamped ControlManager::getClosestPointInSafetyArea3d(
+    const mrs_msgs::msg::ReferenceStamped& point) {
+  mrs_msgs::msg::ReferenceStamped result = point;
+
+  if (!use_safety_area_) {
+    return result;
+  }
+
+  // Check if already inside
+  if (isPointInSafetyArea3d(point)) {
+    return result;
+  }
+
+  // Transform to safety area horizontal frame
+  auto tfed_horizontal =
+      transformer_->transformSingle(point, _safety_area_horizontal_frame_);
+
+  if (!tfed_horizontal) {
+    RCLCPP_ERROR_THROTTLE(node_->get_logger(), *clock_, 1000,
+                          "SafetyArea: Could not transform the point to the "
+                          "safety area horizontal frame");
+    return result;
+  }
+
+  // Get the polygon border
+  mrs_lib::safety_zone::Polygon border = safety_zone_->getBorder();
+  std::vector<geometry_msgs::msg::Point> border_points =
+      border.getPointMessageVector(0.0);
+
+  // Find closest point on the polygon border
+  double min_distance = std::numeric_limits<double>::max();
+  double closest_x = tfed_horizontal->reference.position.x;
+  double closest_y = tfed_horizontal->reference.position.y;
+
+  // If point is outside horizontally, project it onto the border
+  if (!safety_zone_->isPointValid(tfed_horizontal->reference.position.x,
+                                  tfed_horizontal->reference.position.y)) {
+    // Check distance to each edge of the polygon
+    for (size_t i = 0; i < border_points.size(); i++) {
+      size_t next_i = (i + 1) % border_points.size();
+
+      double x1 = border_points[i].x;
+      double y1 = border_points[i].y;
+      double x2 = border_points[next_i].x;
+      double y2 = border_points[next_i].y;
+
+      // Vector from point1 to point2
+      double edge_x = x2 - x1;
+      double edge_y = y2 - y1;
+
+      // Vector from point1 to our point
+      double to_point_x = tfed_horizontal->reference.position.x - x1;
+      double to_point_y = tfed_horizontal->reference.position.y - y1;
+
+      // Project onto the edge
+      double edge_length_sq = edge_x * edge_x + edge_y * edge_y;
+      double t = 0.0;
+
+      if (edge_length_sq > 1e-10) {
+        t = (to_point_x * edge_x + to_point_y * edge_y) / edge_length_sq;
+        t = std::max(0.0, std::min(1.0, t));  // Clamp to [0, 1]
+      }
+
+      // Closest point on this edge
+      double proj_x = x1 + t * edge_x;
+      double proj_y = y1 + t * edge_y;
+
+      // Distance to this projected point
+      double dx = tfed_horizontal->reference.position.x - proj_x;
+      double dy = tfed_horizontal->reference.position.y - proj_y;
+      double distance = std::sqrt(dx * dx + dy * dy);
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        closest_x = proj_x;
+        closest_y = proj_y;
+      }
+    }
+
+    // Move the point slightly inward (1cm) to ensure it's inside
+    double center_x = 0.0;
+    double center_y = 0.0;
+    for (const auto& bp : border_points) {
+      center_x += bp.x;
+      center_y += bp.y;
+    }
+    center_x /= border_points.size();
+    center_y /= border_points.size();
+
+    double to_center_x = center_x - closest_x;
+    double to_center_y = center_y - closest_y;
+    double to_center_norm =
+        std::sqrt(to_center_x * to_center_x + to_center_y * to_center_y);
+
+    if (to_center_norm > 1e-6) {
+      closest_x += 0.01 * (to_center_x / to_center_norm);
+      closest_y += 0.01 * (to_center_y / to_center_norm);
+    }
+
+    tfed_horizontal->reference.position.x = closest_x;
+    tfed_horizontal->reference.position.y = closest_y;
+  }
+
+  // Transform back to original frame
+  auto result_in_original =
+      transformer_->transformSingle(*tfed_horizontal, point.header.frame_id);
+
+  if (result_in_original) {
+    result = *result_in_original;
+  }
+
+  // Clamp Z coordinate
+  double min_z = getMinZ(point.header.frame_id);
+  double max_z = getMaxZ(point.header.frame_id);
+
+  if (result.reference.position.z < min_z) {
+    result.reference.position.z = min_z;
+  } else if (result.reference.position.z > max_z) {
+    result.reference.position.z = max_z;
+  }
+
+  return result;
+}
+
+//}
+
 /* //{ isPointInSafetyArea2d() */
 
 bool ControlManager::isPointInSafetyArea2d(
@@ -7887,6 +8047,121 @@ bool ControlManager::isPointInSafetyArea2d(
   }
 
   return true;
+}
+
+//}
+
+/* //{ getClosestPointInSafetyArea2d() */
+
+mrs_msgs::msg::ReferenceStamped ControlManager::getClosestPointInSafetyArea2d(
+    const mrs_msgs::msg::ReferenceStamped& point) {
+  mrs_msgs::msg::ReferenceStamped result = point;
+
+  // If safety area is disabled, return the original point
+  if (!use_safety_area_) {
+    return result;
+  }
+
+  // Transform point to safety area horizontal frame
+  auto tfed_horizontal =
+      transformer_->transformSingle(point, _safety_area_horizontal_frame_);
+
+  if (!tfed_horizontal) {
+    RCLCPP_ERROR_THROTTLE(
+        node_->get_logger(), *clock_, 1000,
+        "SafetyArea: Could not transform the point to the "
+        "safety area horizontal frame in getClosestPointInSafetyArea2d");
+    return result;
+  }
+
+  double px = tfed_horizontal->reference.position.x;
+  double py = tfed_horizontal->reference.position.y;
+
+  // If point is already inside, return it
+  if (safety_zone_->isPointValid(px, py)) {
+    return result;
+  }
+
+  // Point is outside - find closest point on the boundary
+  mrs_lib::safety_zone::Polygon border = safety_zone_->getBorder();
+  std::vector<geometry_msgs::msg::Point> border_points =
+      border.getPointMessageVector(0.0);
+
+  double closest_x = px;
+  double closest_y = py;
+  double min_distance = std::numeric_limits<double>::max();
+
+  // Iterate through all edges of the polygon
+  for (size_t i = 0; i < border_points.size(); i++) {
+    size_t next_i = (i + 1) % border_points.size();
+
+    double x1 = border_points[i].x;
+    double y1 = border_points[i].y;
+    double x2 = border_points[next_i].x;
+    double y2 = border_points[next_i].y;
+
+    // Vector from point1 to point2 of the edge
+    double edge_x = x2 - x1;
+    double edge_y = y2 - y1;
+    double edge_length_sq = edge_x * edge_x + edge_y * edge_y;
+
+    // Vector from point1 to query point
+    double to_point_x = px - x1;
+    double to_point_y = py - y1;
+
+    // Project query point onto the edge (clamped to [0, 1])
+    double t = 0.0;
+    if (edge_length_sq > 1e-10) {
+      t = (to_point_x * edge_x + to_point_y * edge_y) / edge_length_sq;
+      t = std::max(0.0, std::min(1.0, t));
+    }
+
+    // Closest point on this edge
+    double proj_x = x1 + t * edge_x;
+    double proj_y = y1 + t * edge_y;
+
+    // Distance from query point to projected point
+    double dx = px - proj_x;
+    double dy = py - proj_y;
+    double distance = std::sqrt(dx * dx + dy * dy);
+
+    if (distance < min_distance) {
+      min_distance = distance;
+      closest_x = proj_x;
+      closest_y = proj_y;
+    }
+  }
+
+  // Nudge the point slightly inward (1cm) to ensure it's safely inside
+  if (min_distance > 1e-6) {
+    double nudge = 0.01;  // 1cm
+    double dx = px - closest_x;
+    double dy = py - closest_y;
+    double dist = std::sqrt(dx * dx + dy * dy);
+    if (dist > nudge) {
+      closest_x += (dx / dist) * nudge;
+      closest_y += (dy / dist) * nudge;
+    }
+  }
+
+  // Create corrected point in safety area frame
+  mrs_msgs::msg::ReferenceStamped corrected_horizontal = *tfed_horizontal;
+  corrected_horizontal.reference.position.x = closest_x;
+  corrected_horizontal.reference.position.y = closest_y;
+
+  // Transform back to original frame
+  auto tfed_back = transformer_->transformSingle(corrected_horizontal,
+                                                 point.header.frame_id);
+
+  if (!tfed_back) {
+    RCLCPP_ERROR_THROTTLE(
+        node_->get_logger(), *clock_, 1000,
+        "SafetyArea: Could not transform corrected point back "
+        "to original frame in getClosestPointInSafetyArea2d");
+    return result;
+  }
+
+  return *tfed_back;
 }
 
 //}
@@ -8281,9 +8556,9 @@ void ControlManager::bumperPushFromObstacle(void) {
       std::scoped_lock lock(mutex_tracker_list_);
 
       // transform the reference into the currently used frame
-      // this is under the mutex_tracker_list since we don't won't the odometry
-      // switch to happen to the tracker before we actually call the goto
-      // service
+      // this is under the mutex_tracker_list since we don't won't the
+      // odometry switch to happen to the tracker before we actually call the
+      // goto service
 
       auto ret = transformer_->transformSingle(reference_fcu_untilted,
                                                uav_state.header.frame_id);
@@ -8885,9 +9160,9 @@ std::tuple<bool, std::string> ControlManager::escalatingFailsafe(void) {
     }
   }
 
-  RCLCPP_ERROR(
-      node_->get_logger(),
-      "escalatingFailsafe() reached the final return, this should not happen!");
+  RCLCPP_ERROR(node_->get_logger(),
+               "escalatingFailsafe() reached the final return, this should "
+               "not happen!");
 
   return std::tuple(false, "escalating failsafe exception");
 }
@@ -9419,8 +9694,8 @@ std::tuple<bool, std::string> ControlManager::switchTracker(
                       _tracker_names_.at(active_tracker_idx_).c_str());
           tracker_list_.at(active_tracker_idx_)->deactivate();
 
-          // if switching from null tracker, re-activate the already active the
-          // controller
+          // if switching from null tracker, re-activate the already active
+          // the controller
           if (active_tracker_idx_ == _null_tracker_idx_) {
             RCLCPP_INFO(node_->get_logger(),
                         "reactivating '%s' due to switching from 'NullTracker'",
@@ -9557,8 +9832,8 @@ std::tuple<bool, std::string> ControlManager::switchController(
             _tracker_names_.at(active_tracker_idx_).c_str());
 
         // reactivate the current tracker
-        // TODO this is not the most elegant way to restart the tracker after a
-        // controller switch but it serves the purpose
+        // TODO this is not the most elegant way to restart the tracker after
+        // a controller switch but it serves the purpose
         {
           std::scoped_lock lock(mutex_tracker_list_);
 
@@ -9772,7 +10047,8 @@ void ControlManager::updateControllers(
 
       } else {
         try {
-          // nonactive controller => just update without retrieving the command
+          // nonactive controller => just update without retrieving the
+          // command
           controller_list_.at(i)->updateInactive(uav_state, last_tracker_cmd);
         } catch (std::runtime_error& exrun) {
           RCLCPP_ERROR_THROTTLE(node_->get_logger(), *clock_, 1000,

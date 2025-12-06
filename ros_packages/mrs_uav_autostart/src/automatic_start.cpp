@@ -691,6 +691,8 @@ void AutomaticStart::timerMain() {
 
       timer_main_->stop();
 
+      rclcpp::shutdown();
+
       break;
     }
   }
