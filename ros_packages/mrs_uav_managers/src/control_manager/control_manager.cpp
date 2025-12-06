@@ -263,7 +263,7 @@ class ControlManager : public mrs_lib::Node {
 
   ControlOutputModalities_t _hw_api_inputs_;
 
-  double desired_uav_state_rate_ = 100.0;
+  double desired_uav_state_rate_ = 50.0;
 
   // this timer will check till we already got the hardware api diagnostics
   // then it will trigger the initialization of the controllers and finish
@@ -1896,15 +1896,15 @@ void ControlManager::initialize(void) {
 
     if (lowest_output == ACTUATORS_CMD || lowest_output == CONTROL_GROUP) {
       _safety_timer_rate_ = 200.0;
-      desired_uav_state_rate_ = 250.0;
+      desired_uav_state_rate_ = 50.0;
     } else if (lowest_output == ATTITUDE_RATE || lowest_output == ATTITUDE) {
       _safety_timer_rate_ = 100.0;
-      desired_uav_state_rate_ = 100.0;
+      desired_uav_state_rate_ = 50.0;
     } else if (lowest_output == ACCELERATION_HDG_RATE ||
                lowest_output == ACCELERATION_HDG) {
       _safety_timer_rate_ = 30.0;
       _status_timer_rate_ = 1.0;
-      desired_uav_state_rate_ = 40.0;
+      desired_uav_state_rate_ = 50.0;
 
       if (_uav_state_max_missing_time_ < 0.2) {
         _uav_state_max_missing_time_ = 0.2;
@@ -1912,7 +1912,7 @@ void ControlManager::initialize(void) {
     } else if (lowest_output >= VELOCITY_HDG_RATE) {
       _safety_timer_rate_ = 20.0;
       _status_timer_rate_ = 1.0;
-      desired_uav_state_rate_ = 20.0;
+      desired_uav_state_rate_ = 50.0;
 
       if (_uav_state_max_missing_time_ < 1.0) {
         _uav_state_max_missing_time_ = 1.0;

@@ -747,7 +747,7 @@ void EstimationManager::initialize() {
     RCLCPP_WARN(node_->get_logger(),
                 "Not received control_manager_diagnostics, setting fallback "
                 "estimation rate");
-    ch_->desired_uav_state_rate = 100;
+    ch_->desired_uav_state_rate = 50;
 
   } else {
     RCLCPP_INFO(node_->get_logger(),
