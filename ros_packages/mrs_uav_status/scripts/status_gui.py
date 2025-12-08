@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import rclpy
+from tkinter import messagebox
 from geometry_msgs.msg import Pose, PoseStamped
 from mrs_msgs.msg import Reference, UavStatus, UavStatusShort
 from mrs_msgs.srv import ReferenceStampedSrv, String as StringSrv
@@ -25,7 +26,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
-from std_srvs.srv import Trigger
+from std_srvs.srv import SetBool, Trigger
 from tf2_geometry_msgs import do_transform_pose
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import MarkerArray
@@ -94,6 +95,11 @@ class StatusCollector(Node):
                 "ref": self.create_client(ReferenceStampedSrv, f"/{uav}/control_manager/reference"),
                 "constraints": self.create_client(StringSrv, f"/{uav}/constraint_manager/set_constraints"),
                 "hover": self.create_client(Trigger, f"/{uav}/control_manager/hover"),
+                "arming": self.create_client(SetBool, f"/{uav}/hw_api/arming"),
+                "offboard": self.create_client(Trigger, f"/{uav}/hw_api/offboard"),
+                "takeoff": self.create_client(Trigger, f"/{uav}/uav_manager/takeoff"),
+                "land": self.create_client(Trigger, f"/{uav}/uav_manager/land"),
+                "toggle_output": self.create_client(Trigger, f"/{uav}/control_manager/toggle_output"),
             }
 
     def _handle_status(self, uav: str, msg: UavStatus) -> None:
@@ -245,6 +251,38 @@ class StatusCollector(Node):
             client.wait_for_service(timeout_sec=0.2)
         client.call_async(Trigger.Request())
 
+    def arm(self, name: str, arm: bool = True) -> None:
+        client = self._svc_clients[name]["arming"]
+        if not client.service_is_ready():
+            client.wait_for_service(timeout_sec=0.2)
+        request = SetBool.Request()
+        request.data = arm
+        client.call_async(request)
+
+    def offboard(self, name: str) -> None:
+        client = self._svc_clients[name]["offboard"]
+        if not client.service_is_ready():
+            client.wait_for_service(timeout_sec=0.2)
+        client.call_async(Trigger.Request())
+
+    def takeoff(self, name: str) -> None:
+        client = self._svc_clients[name]["takeoff"]
+        if not client.service_is_ready():
+            client.wait_for_service(timeout_sec=0.2)
+        client.call_async(Trigger.Request())
+
+    def land(self, name: str) -> None:
+        client = self._svc_clients[name]["land"]
+        if not client.service_is_ready():
+            client.wait_for_service(timeout_sec=0.2)
+        client.call_async(Trigger.Request())
+
+    def toggle_output(self, name: str) -> None:
+        client = self._svc_clients[name]["toggle_output"]
+        if not client.service_is_ready():
+            client.wait_for_service(timeout_sec=0.2)
+        client.call_async(Trigger.Request())
+
     def _now(self) -> float:
         ros_time: Time = self.get_clock().now()
         return float(ros_time.nanoseconds) * 1e-9
@@ -262,6 +300,7 @@ class UavFrame(ttk.LabelFrame):
             ("diag", "Diagnostics"),
             ("mode", "Mode / RC"),
             ("armed", "Arming"),
+            ("output", "Control Output"),
             ("position", "Position [m]", 30),
             ("setpoint", "Setpoint [m]", 30),
             ("controller", "Controller"),
@@ -307,6 +346,10 @@ class UavFrame(ttk.LabelFrame):
         armed = "ARMED" if msg.hw_api_armed else "DISARMED"
         ready = "ready" if msg.automatic_start_can_takeoff else "not ready"
         self._set("armed", f"{armed}, {ready}")
+
+        # Set control output status based on null_tracker (if null_tracker is active, output is effectively disabled)
+        output_status = "DISABLED" if msg.null_tracker else "ENABLED"
+        self._set("output", output_status)
 
         self._set("position", self._format_pose(msg.odom_x, msg.odom_y, msg.odom_z, msg.odom_hdg))
         self._set("setpoint", self._format_pose(msg.cmd_x, msg.cmd_y, msg.cmd_z, msg.cmd_hdg))
@@ -400,9 +443,15 @@ class RemotePanel(ttk.LabelFrame):
             row=row, column=1, sticky="w", padx=4, pady=2
         )
         ttk.Button(self, text="Hover", command=self._hover).grid(row=row, column=2, sticky="ew", padx=4, pady=2)
+        ttk.Button(self, text="Arm", command=self._arm).grid(row=row, column=3, sticky="ew", padx=4, pady=2)
+        ttk.Button(self, text="Offboard", command=self._offboard).grid(row=row, column=4, sticky="ew", padx=4, pady=2)
 
         row += 1
-        ttk.Button(self, text="w/k/Pitch+ (fwd)", width=12, command=lambda: self._send_scaled(1.0, 0.0, 0.0, 0.0)).grid(row=row, column=1, padx=2, pady=2)
+        ttk.Button(self, text="Takeoff", command=self._takeoff).grid(row=row, column=0, sticky="ew", padx=4, pady=2)
+        ttk.Button(self, text="Land", command=self._land).grid(row=row, column=1, sticky="ew", padx=4, pady=2)
+        ttk.Button(self, text="Toggle Output", command=self._toggle_output).grid(row=row, column=2, sticky="ew", padx=4, pady=2)
+
+        row += 1
 
         row += 1
         ttk.Button(self, text="a/h/Roll+ (left)", width=12, command=lambda: self._send_scaled(0.0, 1.0, 0.0, 0.0)).grid(row=row, column=0, padx=2, pady=2)
@@ -466,6 +515,30 @@ class RemotePanel(ttk.LabelFrame):
 
     def _hover(self) -> None:
         self.collector.hover(self.uav)
+
+    def _arm(self) -> None:
+        snap = self.collector.get_latest(self.uav)
+        if snap is None or snap.status is None:
+            messagebox.showwarning("No Data", f"No status data available for {self.uav}")
+            return
+        
+        is_armed = snap.status.hw_api_armed
+        action = "DISARM" if is_armed else "ARM"
+        
+        if messagebox.askyesno(f"Confirm {action}", f"Are you sure you want to {action} the UAV?"):
+            self.collector.arm(self.uav, arm=not is_armed)
+
+    def _offboard(self) -> None:
+        self.collector.offboard(self.uav)
+
+    def _takeoff(self) -> None:
+        self.collector.takeoff(self.uav)
+
+    def _land(self) -> None:
+        self.collector.land(self.uav)
+
+    def _toggle_output(self) -> None:
+        self.collector.toggle_output(self.uav)
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
