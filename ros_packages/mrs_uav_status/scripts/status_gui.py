@@ -99,7 +99,7 @@ class StatusCollector(Node):
                 "offboard": self.create_client(Trigger, f"/{uav}/hw_api/offboard"),
                 "takeoff": self.create_client(Trigger, f"/{uav}/uav_manager/takeoff"),
                 "land": self.create_client(Trigger, f"/{uav}/uav_manager/land"),
-                "toggle_output": self.create_client(Trigger, f"/{uav}/control_manager/toggle_output"),
+                "toggle_output": self.create_client(SetBool, f"/{uav}/control_manager/toggle_output"),
             }
 
     def _handle_status(self, uav: str, msg: UavStatus) -> None:
@@ -278,10 +278,21 @@ class StatusCollector(Node):
         client.call_async(Trigger.Request())
 
     def toggle_output(self, name: str) -> None:
+        """Toggle control output ON/OFF based on current state (null_tracker status)."""
+        snap = self.get_latest(name)
         client = self._svc_clients[name]["toggle_output"]
         if not client.service_is_ready():
             client.wait_for_service(timeout_sec=0.2)
-        client.call_async(Trigger.Request())
+        
+        # Determine current state: if null_tracker is active, output is OFF
+        # Toggle to opposite state
+        request = SetBool.Request()
+        if snap and snap.status:
+            request.data = snap.status.null_tracker  # If null_tracker=True (OFF), set to True to turn ON
+        else:
+            request.data = True  # Default to enabling output if state unknown
+        
+        client.call_async(request)
 
     def _now(self) -> float:
         ros_time: Time = self.get_clock().now()
