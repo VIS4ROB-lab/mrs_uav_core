@@ -481,12 +481,12 @@ class RemotePanel(ttk.LabelFrame):
 
     def _send_scaled(self, dx_factor: float, dy_factor: float, dz: float, dh: float) -> None:
         """Send offset with scale applied from safety area size."""
-        scale = min(self._get_current_scale(), 1)
+        scale = min(self._get_current_scale(), 2)
         self._send(dx_factor * scale, dy_factor * scale, dz, dh)
 
     def handle_key(self, keysym: str) -> bool:
         """Return True if the key was handled, mirroring tmux key map."""
-        scale = min(self._get_current_scale(), 1)
+        scale = min(self._get_current_scale(), 2)
         mapping = {
             ("w", "k", "Up"): (scale, 0.0, 0.0, 0.0),
             ("s", "j", "Down"): (-scale, 0.0, 0.0, 0.0),
