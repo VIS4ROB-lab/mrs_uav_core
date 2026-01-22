@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Tuple
 import rclpy
 from tkinter import messagebox
 from geometry_msgs.msg import Pose, PoseStamped
-from mrs_msgs.msg import Reference, UavStatus, UavStatusShort
+from mrs_msgs.msg import Reference, UavStatus, UavStatusShort, ControlManagerDiagnostics
 from mrs_msgs.srv import ReferenceStampedSrv, String as StringSrv
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
@@ -47,6 +47,7 @@ class UavSnapshot:
 
     status: Optional[UavStatus] = None
     status_short: Optional[UavStatusShort] = None
+    control_manager_diag: Optional[ControlManagerDiagnostics] = None
     last_update: float = 0.0
 
 
@@ -85,6 +86,12 @@ class StatusCollector(Node):
                 qos,
             )
             self.create_subscription(
+                ControlManagerDiagnostics,
+                f"/{uav}/control_manager/diagnostics",
+                lambda msg, name=uav: self._handle_control_manager_diag(name, msg),
+                qos,
+            )
+            self.create_subscription(
                 MarkerArray,
                 f"/{uav}/control_manager/safety_area_markers",
                 lambda msg, name=uav: self._handle_safety_area_markers(name, msg),
@@ -112,6 +119,12 @@ class StatusCollector(Node):
         with self._lock:
             snap = self._data[uav]
             snap.status_short = msg
+            snap.last_update = self._now()
+
+    def _handle_control_manager_diag(self, uav: str, msg: ControlManagerDiagnostics) -> None:
+        with self._lock:
+            snap = self._data[uav]
+            snap.control_manager_diag = msg
             snap.last_update = self._now()
 
     def _handle_safety_area_markers(self, uav: str, msg: MarkerArray) -> None:
@@ -145,7 +158,7 @@ class StatusCollector(Node):
 
     def get_snapshot(self) -> Dict[str, UavSnapshot]:
         with self._lock:
-            return {name: UavSnapshot(status=val.status, status_short=val.status_short, last_update=val.last_update) for name, val in self._data.items()}
+            return {name: UavSnapshot(status=val.status, status_short=val.status_short, control_manager_diag=val.control_manager_diag, last_update=val.last_update) for name, val in self._data.items()}
 
     def get_latest(self, name: str) -> Optional[UavSnapshot]:
         with self._lock:
@@ -336,6 +349,7 @@ class UavFrame(ttk.LabelFrame):
 
         status = snapshot.status
         short = snapshot.status_short
+        diag = snapshot.control_manager_diag
 
         if status:
             self._render_full(status)
@@ -344,6 +358,11 @@ class UavFrame(ttk.LabelFrame):
         else:
             self._set("diag", "waiting for data", "#b00020")
             return
+
+        # Update output status from diagnostics if available
+        if diag:
+            output_status = "ENABLED" if diag.output_enabled else "DISABLED"
+            self._set("output", output_status)
 
         if status:
             diag_text = self._diag_line(status)
@@ -358,9 +377,9 @@ class UavFrame(ttk.LabelFrame):
         ready = "ready" if msg.automatic_start_can_takeoff else "not ready"
         self._set("armed", f"{armed}, {ready}")
 
-        # Set control output status based on null_tracker (if null_tracker is active, output is effectively disabled)
-        output_status = "DISABLED" if msg.null_tracker else "ENABLED"
-        self._set("output", output_status)
+        # Control output status will be updated from diagnostics in render()
+        # Default to ENABLED if diagnostics not yet available
+        self._set("output", "ENABLED")
 
         self._set("position", self._format_pose(msg.odom_x, msg.odom_y, msg.odom_z, msg.odom_hdg))
         self._set("setpoint", self._format_pose(msg.cmd_x, msg.cmd_y, msg.cmd_z, msg.cmd_hdg))
@@ -472,8 +491,8 @@ class RemotePanel(ttk.LabelFrame):
         row += 1
         ttk.Button(self, text="r (thrust+)", width=12, command=lambda: self._send(0.0, 0.0, 1.0, 0.0)).grid(row=row, column=0, padx=2, pady=2)
         ttk.Button(self, text="f (thrust-)", width=12, command=lambda: self._send(0.0, 0.0, -1.0, 0.0)).grid(row=row, column=1, padx=2, pady=2)
-        ttk.Button(self, text="q (yaw+)", width=12, command=lambda: self._send(0.0, 0.0, 0.0, 0.5)).grid(row=row, column=2, padx=2, pady=2)
-        ttk.Button(self, text="e (yaw-)", width=12, command=lambda: self._send(0.0, 0.0, 0.0, -0.5)).grid(row=row, column=3, padx=2, pady=2)
+        ttk.Button(self, text="q (yaw+)", width=12, command=lambda: self._send(0.0, 0.0, 0.0, 0.2)).grid(row=row, column=2, padx=2, pady=2)
+        ttk.Button(self, text="e (yaw-)", width=12, command=lambda: self._send(0.0, 0.0, 0.0, -0.2)).grid(row=row, column=3, padx=2, pady=2)
 
     def _get_current_scale(self) -> float:
         """Get the current safety area scale from collector, fallback to default."""
@@ -494,8 +513,8 @@ class RemotePanel(ttk.LabelFrame):
             ("d", "l", "Right"): (0.0, -scale, 0.0, 0.0),
             ("r",): (0.0, 0.0, 1.0, 0.0),
             ("f",): (0.0, 0.0, -1.0, 0.0),
-            ("q",): (0.0, 0.0, 0.0, 0.5),
-            ("e",): (0.0, 0.0, 0.0, -0.5),
+            ("q",): (0.0, 0.0, 0.0, 0.2),
+            ("e",): (0.0, 0.0, 0.0, -0.2),
         }
 
         if keysym == "T":
