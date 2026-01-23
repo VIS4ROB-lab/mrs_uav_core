@@ -82,7 +82,7 @@ private:
 
   std::shared_ptr<TimerType>              timer_update_;
   void                                    timerUpdate();
-  nav_msgs::msg::Odometry::ConstSharedPtr prev_msg_;
+  nav_msgs::msg::Odometry prev_msg_;
   bool                                    first_iter_ = true;
 
   bool isConverged();

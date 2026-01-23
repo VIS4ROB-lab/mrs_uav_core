@@ -269,7 +269,7 @@ void Passthrough::updateUavState() {
 
   const rclcpp::Time time_now = clock_->now();
 
-  nav_msgs::msg::Odometry::ConstSharedPtr msg = sh_passthrough_odom_.getMsg();
+  nav_msgs::msg::Odometry msg = *(sh_passthrough_odom_.getMsg());
 
   if (first_iter_) {
     prev_msg_   = msg;
@@ -280,20 +280,19 @@ void Passthrough::updateUavState() {
 
   uav_state.header.stamp = time_now;
 
-  uav_state.pose.position    = msg->pose.pose.position;
-  uav_state.pose.orientation = msg->pose.pose.orientation;
+  uav_state.pose.position    = msg.pose.pose.position;
+  uav_state.pose.orientation = msg.pose.pose.orientation;
 
-  uav_state.velocity.linear  = Support::rotateVector(msg->twist.twist.linear, msg->pose.pose.orientation);
-  uav_state.velocity.angular = msg->twist.twist.angular;
-
+  uav_state.velocity.linear  = Support::rotateVector(msg.twist.twist.linear, msg.pose.pose.orientation);
+  uav_state.velocity.angular = msg.twist.twist.angular;
   const nav_msgs::msg::Odometry odom = Support::uavStateToOdom(uav_state);
 
   nav_msgs::msg::Odometry innovation = innovation_init_;
   innovation.header.stamp            = time_now;
 
-  innovation.pose.pose.position.x = prev_msg_->pose.pose.position.x - msg->pose.pose.position.x;
-  innovation.pose.pose.position.y = prev_msg_->pose.pose.position.y - msg->pose.pose.position.y;
-  innovation.pose.pose.position.z = prev_msg_->pose.pose.position.z - msg->pose.pose.position.z;
+  innovation.pose.pose.position.x = prev_msg_.pose.pose.position.x - msg.pose.pose.position.x;
+  innovation.pose.pose.position.y = prev_msg_.pose.pose.position.y - msg.pose.pose.position.y;
+  innovation.pose.pose.position.z = prev_msg_.pose.pose.position.z - msg.pose.pose.position.z;
 
   mrs_msgs::msg::Float64ArrayStamped pose_covariance, twist_covariance;
   pose_covariance.header.stamp  = time_now;
@@ -335,12 +334,12 @@ void Passthrough::callbackPassthroughOdom(const nav_msgs::msg::Odometry::ConstSh
     changeState(RUNNING_STATE);
   }
 
+  nav_msgs::msg::Odometry odom = *msg;
+
   if (first_iter_) {
-    prev_msg_   = msg;
+    prev_msg_   = odom;
     first_iter_ = false;
   }
-
-  nav_msgs::msg::Odometry odom = *msg;
 
   // change the frame_ids
   odom.header.frame_id = ns_frame_id_;
@@ -364,9 +363,9 @@ void Passthrough::callbackPassthroughOdom(const nav_msgs::msg::Odometry::ConstSh
   nav_msgs::msg::Odometry innovation = innovation_init_;
   innovation.header.stamp            = odom.header.stamp;
 
-  innovation.pose.pose.position.x = prev_msg_->pose.pose.position.x - msg->pose.pose.position.x;
-  innovation.pose.pose.position.y = prev_msg_->pose.pose.position.y - msg->pose.pose.position.y;
-  innovation.pose.pose.position.z = prev_msg_->pose.pose.position.z - msg->pose.pose.position.z;
+  innovation.pose.pose.position.x = prev_msg_.pose.pose.position.x - odom.pose.pose.position.x;
+  innovation.pose.pose.position.y = prev_msg_.pose.pose.position.y - odom.pose.pose.position.y;
+  innovation.pose.pose.position.z = prev_msg_.pose.pose.position.z - odom.pose.pose.position.z;
 
   mrs_msgs::msg::Float64ArrayStamped pose_covariance, twist_covariance;
   pose_covariance.header.stamp  = odom.header.stamp;
@@ -395,7 +394,7 @@ void Passthrough::callbackPassthroughOdom(const nav_msgs::msg::Odometry::ConstSh
   publishInnovation();
   publishDiagnostics();
 
-  prev_msg_ = msg;
+  prev_msg_ = odom;
 }
 /*//}*/
 
