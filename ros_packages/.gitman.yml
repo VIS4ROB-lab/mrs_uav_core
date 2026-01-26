@@ -144,3 +144,111 @@ sources:
         target: mrs_uav_status
     scripts:
       - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_bumper.git
+    name: mrs_bumper
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_bumper
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_gazebo_common_resources.git
+    name: mrs_gazebo_common_resources
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_gazebo_common_resources
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_mpc_solvers.git
+    name: mrs_mpc_solvers
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_mpc_solvers
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_uav_deployment.git
+    name: mrs_uav_deployment
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_uav_deployment
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_uav_gazebo_simulator.git
+    name: mrs_uav_gazebo_simulator
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_uav_gazebo_simulator
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_uav_px4_api.git
+    name: mrs_uav_px4_api
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_uav_px4_api
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_modules_msgs.git
+    name: mrs_modules_msgs
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_modules_msgs
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_rviz_plugins.git
+    name: mrs_rviz_plugins
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_rviz_plugins
+    scripts:
+      - git submodule update --init --recursive
+  - repo: https://github.com/VIS4ROB-lab/mrs_serial.git
+    name: mrs_serial
+    rev: humble
+    type: git
+    params:
+    sparse_paths:
+      -
+    links:
+      - source: ''
+        target: mrs_serial
+    scripts:
+      - git submodule update --init --recursive
