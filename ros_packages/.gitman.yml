@@ -2,7 +2,7 @@ location: .gitman
 sources:
   - repo: https://github.com/VIS4ROB-lab/mrs_multirotor_simulator
     name: mrs_multirotor_simulator
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -14,7 +14,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_state_estimators.git
     name: mrs_uav_state_estimators
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -26,7 +26,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_hw_api.git
     name: mrs_uav_hw_api
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -38,7 +38,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_lib.git
     name: mrs_lib
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -50,7 +50,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_msgs.git
     name: mrs_msgs
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -62,7 +62,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_controllers.git
     name: mrs_uav_controllers
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -74,7 +74,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_managers.git
     name: mrs_uav_managers
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -86,7 +86,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_trackers.git
     name: mrs_uav_trackers
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -98,7 +98,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_autostart.git
     name: mrs_uav_autostart
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -110,7 +110,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_testing.git
     name: mrs_uav_testing
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -122,7 +122,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_trajectory_generation.git
     name: mrs_uav_trajectory_generation
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
@@ -134,7 +134,7 @@ sources:
       - git submodule update --init --recursive
   - repo: https://github.com/VIS4ROB-lab/mrs_uav_status.git
     name: mrs_uav_status
-    rev: pre-humble
+    rev: humble
     type: git
     params:
     sparse_paths:
