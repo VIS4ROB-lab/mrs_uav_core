@@ -1,6 +1,6 @@
 location: .gitman
 sources:
-  - repo: https://github.com/VIS4ROB-lab/mrs_multirotor_simulator
+  - repo: https://github.com/v4rl-ucy/mrs_multirotor_simulator
     name: mrs_multirotor_simulator
     rev: humble
     type: git
@@ -12,7 +12,7 @@ sources:
         target: mrs_multirotor_simulator
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_state_estimators.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_state_estimators.git
     name: mrs_uav_state_estimators
     rev: humble
     type: git
@@ -24,7 +24,7 @@ sources:
         target: mrs_uav_state_estimators
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_hw_api.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_hw_api.git
     name: mrs_uav_hw_api
     rev: humble
     type: git
@@ -36,7 +36,7 @@ sources:
         target: mrs_uav_hw_api
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_lib.git
+  - repo: https://github.com/v4rl-ucy/mrs_lib.git
     name: mrs_lib
     rev: humble
     type: git
@@ -48,7 +48,7 @@ sources:
         target: mrs_lib
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_msgs.git
+  - repo: https://github.com/v4rl-ucy/mrs_msgs.git
     name: mrs_msgs
     rev: humble
     type: git
@@ -60,7 +60,7 @@ sources:
         target: mrs_msgs
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_controllers.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_controllers.git
     name: mrs_uav_controllers
     rev: humble
     type: git
@@ -72,7 +72,7 @@ sources:
         target: mrs_uav_controllers
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_managers.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_managers.git
     name: mrs_uav_managers
     rev: humble
     type: git
@@ -84,7 +84,7 @@ sources:
         target: mrs_uav_managers
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_trackers.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_trackers.git
     name: mrs_uav_trackers
     rev: humble
     type: git
@@ -96,7 +96,7 @@ sources:
         target: mrs_uav_trackers
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_autostart.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_autostart.git
     name: mrs_uav_autostart
     rev: humble
     type: git
@@ -108,7 +108,7 @@ sources:
         target: mrs_uav_autostart
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_testing.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_testing.git
     name: mrs_uav_testing
     rev: humble
     type: git
@@ -120,7 +120,7 @@ sources:
         target: mrs_uav_testing
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_trajectory_generation.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_trajectory_generation.git
     name: mrs_uav_trajectory_generation
     rev: humble
     type: git
@@ -132,7 +132,7 @@ sources:
         target: mrs_uav_trajectory_generation
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_status.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_status.git
     name: mrs_uav_status
     rev: humble
     type: git
@@ -144,7 +144,7 @@ sources:
         target: mrs_uav_status
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_bumper.git
+  - repo: https://github.com/v4rl-ucy/mrs_bumper.git
     name: mrs_bumper
     rev: humble
     type: git
@@ -156,7 +156,7 @@ sources:
         target: mrs_bumper
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_gazebo_common_resources.git
+  - repo: https://github.com/v4rl-ucy/mrs_gazebo_common_resources.git
     name: mrs_gazebo_common_resources
     rev: humble
     type: git
@@ -168,7 +168,7 @@ sources:
         target: mrs_gazebo_common_resources
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_mpc_solvers.git
+  - repo: https://github.com/v4rl-ucy/mrs_mpc_solvers.git
     name: mrs_mpc_solvers
     rev: humble
     type: git
@@ -180,7 +180,7 @@ sources:
         target: mrs_mpc_solvers
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_deployment.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_deployment.git
     name: mrs_uav_deployment
     rev: humble
     type: git
@@ -192,7 +192,7 @@ sources:
         target: mrs_uav_deployment
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_gazebo_simulator.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_gazebo_simulator.git
     name: mrs_uav_gazebo_simulator
     rev: humble
     type: git
@@ -204,7 +204,7 @@ sources:
         target: mrs_uav_gazebo_simulator
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_px4_api.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_px4_api.git
     name: mrs_uav_px4_api
     rev: humble
     type: git
@@ -216,7 +216,7 @@ sources:
         target: mrs_uav_px4_api
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_uav_apm_api.git
+  - repo: https://github.com/v4rl-ucy/mrs_uav_apm_api.git
     name: mrs_uav_apm_api
     rev: humble
     type: git
@@ -228,7 +228,7 @@ sources:
         target: mrs_uav_apm_api
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_modules_msgs.git
+  - repo: https://github.com/v4rl-ucy/mrs_modules_msgs.git
     name: mrs_modules_msgs
     rev: humble
     type: git
@@ -240,7 +240,7 @@ sources:
         target: mrs_modules_msgs
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_rviz_plugins.git
+  - repo: https://github.com/v4rl-ucy/mrs_rviz_plugins.git
     name: mrs_rviz_plugins
     rev: humble
     type: git
@@ -252,7 +252,7 @@ sources:
         target: mrs_rviz_plugins
     scripts:
       - git submodule update --init --recursive
-  - repo: https://github.com/VIS4ROB-lab/mrs_serial.git
+  - repo: https://github.com/v4rl-ucy/mrs_serial.git
     name: mrs_serial
     rev: humble
     type: git
